@@ -8,8 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Sparkles, Loader2, CheckCircle2, XCircle } from "lucide-react";
-// import { supabase } from "@/integrations/supabase/client";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { CodeSuggestion } from "@/types/project";
@@ -22,21 +21,20 @@ interface AIReviewPanelProps {
 }
 
 const MODELS = [
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Powerful)" },
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini" },
+  { value: "tinyllama-1.1b-chat-v1.0.Q4_K_M", label: "tinyllama-1.1b" },
   { value: "openai/gpt-5", label: "GPT-5" },
 ];
 
 export const AIReviewPanel = ({
   projectFiles,
   selectedCode,
-  onReviewComplete,
 }: AIReviewPanelProps) => {
   const [selectedModel, setSelectedModel] = useState(MODELS[0].value);
   const [isReviewing, setIsReviewing] = useState(false);
   const [suggestions, setSuggestions] = useState<CodeSuggestion[]>([]);
   const { toast } = useToast();
+  const [userMessage, setUserMessage] = useState("");
+
 
   const handleReview = async () => {
     setIsReviewing(true);
@@ -45,31 +43,43 @@ export const AIReviewPanel = ({
     try {
       const codeToReview = selectedCode || JSON.stringify(projectFiles, null, 2);
 
-      // const { data, error } = await supabase.functions.invoke("code-review", {
-      //   body: {
-      //     code: codeToReview,
-      //     model: selectedModel,
-      //     context: selectedCode ? "selected" : "full",
-      //   },
-      // });
+      const response = await fetch("http://127.0.0.1:8000/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: `Here is some code:\n\n${codeToReview}\n\nUser message:\n${userMessage}`,
+        }),
+      });
 
-      // if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
 
-      // const parsedSuggestions: CodeSuggestion[] = data.suggestions.map(
-      //   (s: any) => ({
-      //     ...s,
-      //     id: crypto.randomUUID(),
-      //     status: "pending" as const,
-      //   })
-      // );
+      const data = await response.json();
+      console.log("Data", data.text)
+
+      // Handle both array or single suggestion formats
+      setSuggestions(data.text)
+
+      // const parsedSuggestions: CodeSuggestion[] = rawSuggestions.map((s: any) => ({
+      //   id: crypto.randomUUID(),
+      //   file: s.file || (s?.name ?? "unknown"),
+      //   line: s.line ?? 0,
+      //   type: s.type || "style",
+      //   description: s.description || "No description provided",
+      //   originalCode: s.originalCode || "",
+      //   suggestedCode: s.suggestedCode || "",
+      //   status: "pending",
+      // }));
 
       // setSuggestions(parsedSuggestions);
-      // onReviewComplete(parsedSuggestions);
 
-      // toast({
-      //   title: "Review Complete",
-      //   description: `Found ${parsedSuggestions.length} suggestions`,
-      // });
+      toast({
+        title: "Review Complete",
+        description: `Found suggestion`,
+      });
     } catch (error: any) {
       console.error("Review error:", error);
       toast({
@@ -82,16 +92,17 @@ export const AIReviewPanel = ({
     }
   };
 
-  const handleSuggestionAction = (id: string, action: "accept" | "reject") => {
-    setSuggestions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: action === "accept" ? "accepted" : "rejected" } : s))
-    );
 
-    toast({
-      title: action === "accept" ? "Suggestion Accepted" : "Suggestion Rejected",
-      description: `The suggestion has been ${action}ed`,
-    });
-  };
+  // const handleSuggestionAction = (id: string, action: "accept" | "reject") => {
+  //   setSuggestions((prev) =>
+  //     prev.map((s) => (s.id === id ? { ...s, status: action === "accept" ? "accepted" : "rejected" } : s))
+  //   );
+
+  //   toast({
+  //     title: action === "accept" ? "Suggestion Accepted" : "Suggestion Rejected",
+  //     description: `The suggestion has been ${action}ed`,
+  //   });
+  // };
 
   return (
     <div className="h-full flex flex-col gap-4 p-4">
@@ -113,6 +124,18 @@ export const AIReviewPanel = ({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Add a message for the AI
+            </label>
+            <textarea
+              value={userMessage}
+              onChange={(e) => setUserMessage(e.target.value)}
+              placeholder="E.g., Focus on performance issues or check security vulnerabilities"
+              className="w-full border rounded-md p-2 text-sm resize-none"
+              rows={3}
+            />
           </div>
 
           <Button
@@ -142,7 +165,7 @@ export const AIReviewPanel = ({
         </div>
       </Card>
 
-      <div className="flex-1 overflow-auto space-y-4">
+      {/* <div className="flex-1 overflow-auto space-y-4">
         {suggestions.map((suggestion) => (
           <Card
             key={suggestion.id}
@@ -242,7 +265,33 @@ export const AIReviewPanel = ({
             )}
           </Card>
         ))}
+      </div> */}
+
+      <div className="flex-1 overflow-hidden">
+        <Card className="h-full flex flex-col p-4 space-y-3">
+          <div className="text-xs font-medium mb-1 text-muted-foreground">
+            Suggested:
+          </div>
+
+          <div className="flex-1 overflow-y-auto rounded-md border border-border">
+            //@ts-ignore
+            <SyntaxHighlighter
+              wrapLongLines
+              language="typescript"
+              style={vscDarkPlus}
+              customStyle={{
+                margin: 0,
+                padding: "0.75rem",
+                fontSize: "0.75rem",
+                minHeight: "100%",
+              }}
+            >
+              {suggestions as any}
+            </SyntaxHighlighter>
+          </div>
+        </Card>
       </div>
+
     </div>
   );
 };

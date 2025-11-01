@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 models
+Llama-3.2-1B
 
 # Editor directories and files
 .vscode/*

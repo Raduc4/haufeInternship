@@ -4,7 +4,7 @@ import { Code2, Sparkles } from "lucide-react";
 import { CodeSuggestion, FileNode } from "@/types/project";
 import { FileTree } from "../components/FileTree";
 import { CodeViewer } from "../components/CodeViewer";
-import { toast, useToast } from "../hooks/use-toase";
+import { useToast } from "../hooks/use-toase";
 import { AIReviewPanel } from "../components/AIPreviewPanel";
 import { flattenFiles, processFiles } from "../utils/fileProcessor";
 import { FileUpload } from "../components/FileUpload";

@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from "lucide-react";
+// components/FileTree.tsx
+import React from "react";
 import { FileNode } from "@/types/project";
-import { cn } from "../lib/utils";
+import { Folder, File } from "lucide-react";
 
 interface FileTreeProps {
   nodes: FileNode[];
@@ -9,91 +9,36 @@ interface FileTreeProps {
   onFileSelect: (file: FileNode) => void;
 }
 
-export const FileTree = ({ nodes, selectedFile, onFileSelect }: FileTreeProps) => {
-  return (
-    <div className="py-2">
-      {nodes.map((node) => (
-        <FileTreeNode
-          key={node.id}
-          node={node}
-          selectedFile={selectedFile}
-          onFileSelect={onFileSelect}
-        />
-      ))}
-    </div>
-  );
-};
-
-interface FileTreeNodeProps {
-  node: FileNode;
-  selectedFile: FileNode | null;
-  onFileSelect: (file: FileNode) => void;
-  depth?: number;
-}
-
-const FileTreeNode = ({
-  node,
+export const FileTree: React.FC<FileTreeProps> = ({
+  nodes,
   selectedFile,
   onFileSelect,
-  depth = 0,
-}: FileTreeNodeProps) => {
-  const [isOpen, setIsOpen] = useState(depth === 0);
-  const isSelected = selectedFile?.id === node.id;
-
-  const handleClick = () => {
+}) => {
+  const renderNode = (node: FileNode) => {
     if (node.type === "folder") {
-      setIsOpen(!isOpen);
-    } else {
-      onFileSelect(node);
+      return (
+        <details key={node.name} open className="ml-2">
+          <summary className="flex items-center gap-2 cursor-pointer">
+            <Folder className="w-4 h-4 text-yellow-500" />
+            {node.name}
+          </summary>
+          <div className="ml-4">{node.children?.map(renderNode)}</div>
+        </details>
+      );
     }
+
+    return (
+      <div
+        key={node.name}
+        className={`flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-muted ${selectedFile?.name === node.name ? "bg-muted text-primary" : ""
+          }`}
+        onClick={() => onFileSelect(node)}
+      >
+        <File className="w-4 h-4 text-blue-500" />
+        {node.name}
+      </div>
+    );
   };
 
-  return (
-    <div>
-      <button
-        onClick={handleClick}
-        className={cn(
-          "w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-secondary/50 transition-colors text-left",
-          isSelected && "bg-secondary"
-        )}
-        style={{ paddingLeft: `${depth * 16 + 12}px` }}
-      >
-        {node.type === "folder" && (
-          <>
-            {isOpen ? (
-              <ChevronDown className="w-4 h-4 flex-shrink-0" />
-            ) : (
-              <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            )}
-            {isOpen ? (
-              <FolderOpen className="w-4 h-4 flex-shrink-0 text-primary" />
-            ) : (
-              <Folder className="w-4 h-4 flex-shrink-0 text-primary" />
-            )}
-          </>
-        )}
-        {node.type === "file" && (
-          <>
-            <span className="w-4" />
-            <File className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-          </>
-        )}
-        <span className="truncate">{node.name}</span>
-      </button>
-
-      {node.type === "folder" && isOpen && node.children && (
-        <div>
-          {node.children.map((child) => (
-            <FileTreeNode
-              key={child.id}
-              node={child}
-              selectedFile={selectedFile}
-              onFileSelect={onFileSelect}
-              depth={depth + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <div className="p-2">{nodes.map(renderNode)}</div>;
 };
