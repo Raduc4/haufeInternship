@@ -133,7 +133,7 @@ export const AIReviewPanel = ({
               value={userMessage}
               onChange={(e) => setUserMessage(e.target.value)}
               placeholder="E.g., Focus on performance issues or check security vulnerabilities"
-              className="w-full border rounded-md p-2 text-sm resize-none"
+              className="w-full border rounded-md p-2 text-black text-sm resize-none"
               rows={3}
             />
           </div>
@@ -274,7 +274,6 @@ export const AIReviewPanel = ({
           </div>
 
           <div className="flex-1 overflow-y-auto rounded-md border border-border">
-            //@ts-ignore
             <SyntaxHighlighter
               wrapLongLines
               language="typescript"
