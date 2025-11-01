@@ -1,23 +1,29 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from llama_cpp import Llama
+from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI app
 app = FastAPI(title="Local LLaMA API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or use ["http://localhost:5173"] for safety
+    allow_credentials=True,
+    allow_methods=["*"],  # allow POST, GET, OPTIONS, etc.
+    allow_headers=["*"],  # allow Content-Type and Authorization headers
+)
+
 # Load the TinyLLaMA model (adjust path to your .gguf file)
 model = Llama(model_path="../models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf")
+
 
 # Request schema
 class PromptRequest(BaseModel):
     prompt: str
-    max_tokens: int = 128
+    max_tokens: int = 1028
 
 def build_prompt(code: str) -> str:
-    """
-    Builds the structured context prompt that tells the LLM
-    how to perform the code review and what JSON format to return.
-    """
     prompt = f"""
 You are an expert software engineer and AI-powered code review assistant.
 
@@ -39,31 +45,6 @@ Follow these guidelines carefully:
    - Optimize inefficient or redundant logic.
    - Add missing docstrings or type hints.
    - Recommend additional tests or edge cases.
-
-3. Output only JSON — no explanations, markdown, or text outside JSON.
-
-4. Follow exactly this schema:
-
-{{
-  "refactored_code": "string - the improved version of the input code",
-  "issues": [
-    {{
-      "id": "ISSUE-001",
-      "type": "bug | style | readability | security | performance | testing | documentation | architecture | maintainability",
-      "title": "Short issue title",
-      "description": "Detailed explanation of the problem",
-      "severity": "info | low | medium | high | critical",
-      "recommendation": "Suggested fix or improvement"
-    }}
-  ],
-  "recommendations": [
-    "High-level recommendations to improve overall code quality"
-  ],
-  "estimated_effort": "XS (<30m) | S (30–90m) | M (0.5–1d) | L (1–3d) | XL (3–5d) | XXL (5d+)"
-}}
-
-5. Return only the JSON block. Do not wrap it in backticks, code fences, or add any commentary.
-
 ---
 
 Code to review:
@@ -75,5 +56,7 @@ Code to review:
 @app.post("/generate")
 def generate(request: PromptRequest):
     prompt = build_prompt(request.prompt)
+    print(prompt)
     response = model(prompt, max_tokens=request.max_tokens)
+    print("response",response["choices"][0]["text"])
     return {"text": response['choices'][0]['text']}
